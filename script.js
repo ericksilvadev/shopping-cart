@@ -3,9 +3,11 @@ const emptyCart = document.querySelector('.empty-cart');
 const totalPrice = document.querySelector('.total-price');
 const searchBar = document.querySelector('.search');
 const searchBtn = document.querySelector('.search-btn');
-const titleHeader = document.querySelector('.title');
+const title = document.querySelector('.title');
 const cartIcon = document.querySelector('.cart-icon');
+const cartItemsQuantity = document.querySelector('.items-quantity');
 const cart = document.querySelector('.cart');
+const cartItemsList = document.querySelector('.cart__items');
 let total = 0;
 const cartItems = document.querySelector('.cart__items');
 let cartIds = [];
@@ -28,6 +30,19 @@ const formatter = new Intl.NumberFormat('pt-BR', {
   currency: 'BRL',
 });
 
+// update cart items quantity
+
+const totalCartQuantity = async () => {
+  const itemsQuantity = cartItemsList.children.length;
+  if (itemsQuantity === 0) { 
+    cartItemsQuantity.style.display = 'none'
+  } else {
+    cartItemsQuantity.style.display = 'block'
+    cartItemsQuantity.innerText = itemsQuantity;
+    console.log(itemsQuantity);
+  }
+};
+
 function cartItemClickListener(event) {
   if (!event.target.classList.value) { 
     event.target.parentElement.remove(); 
@@ -35,6 +50,7 @@ function cartItemClickListener(event) {
   }
   event.target.remove();
   saveCart(event.target.id);
+  totalCartQuantity();
 }
 
 function getSkuFromProductItem(item) {
@@ -65,6 +81,7 @@ const addProduct = (id) => new Promise((resolve, reject) => {
   .then((result) => result.json())
   .then((resultJson) => resolve(cartItems.appendChild(createCartItemElement(resultJson))))
   .then(() => saveCart())
+  .then(() => totalCartQuantity())
   .catch((err) => reject(err));
 });
 
@@ -75,7 +92,7 @@ saveIds(id);
 addProduct(id);
 };
 
-const loadCart = () => {
+const loadCart = async () => {
   if (!localStorage || !localStorage.cartStorage) { 
     cartItems.innerHTML = ''; 
     localStorage.total = 0;
@@ -85,6 +102,7 @@ const loadCart = () => {
   const ids = localStorage.getItem('cartStorage').split(',');
   cartIds = ids;
   ids.forEach((product) => addProduct(product));
+  await totalCartQuantity();
 };
 
 function createProductImageElement(imageSource) {
@@ -92,8 +110,8 @@ function createProductImageElement(imageSource) {
   img.style.width = '100%';
   img.style.height = '200px';
   img.style.backgroundSize = 'contain';
-  img.style.backgroundPosition = 'center';
-  img.style.backgroundRepeat = 'no-repeat';
+  img.style.backgroundPosition = 'center'
+  img.style.backgroundRepeat = 'no-repeat'
   img.className = 'item__image';
   img.style.backgroundImage = `url(${imageSource})`;
   return img;
@@ -105,6 +123,7 @@ emptyCart.addEventListener('click', () => {
   totalPrice.innerHTML = formatter.format(total);
   localStorage.clear();
   localStorage.setItem('lastSearch', lastSearch);
+  totalCartQuantity();
 });
 
 function createCustomElement(element, className, innerText) {
@@ -118,7 +137,7 @@ function createCustomElement(element, className, innerText) {
 }
 
 function createProductItemElement({ id, title, thumbnail, price }) {
-  const img = thumbnail.replace('-I.jpg', '-O.jpg');
+  const img = thumbnail.replace('-I.jpg', '-O.jpg')
   const section = document.createElement('section');
   section.className = 'item';
   const imgContainer = document.createElement('div');
@@ -127,12 +146,15 @@ function createProductItemElement({ id, title, thumbnail, price }) {
   infos.classList.add('price-container');
   section.appendChild(imgContainer);
   section.appendChild(infos);
+
   const priceString = formatter.format(price);
+
   infos.appendChild(createCustomElement('span', 'item__sku', id));
   imgContainer.appendChild(createProductImageElement(img));
   infos.appendChild(createCustomElement('span', 'price', priceString));
   infos.appendChild(createCustomElement('span', 'item__title', title));
   infos.appendChild(createCustomElement('button', 'item__add', 'Adicionar ao carrinho!'));
+
   return section;
 }
 
@@ -152,16 +174,6 @@ const generateProductList = async (search) => {
   return products.forEach((product) => itemsList.appendChild(createProductItemElement(product)));
 };
 
-window.onload = async () => {
-  loadCart();
-  if (!localStorage.lastSearch) {
-    const products = await getProduct();
-    return products.forEach((product) => itemsList.appendChild(createProductItemElement(product)));
-  } 
-    lastSearch = localStorage.lastSearch;
-    generateProductList(localStorage.lastSearch);
-};
-
 searchBar.addEventListener('keyup', async (evt) => {
   if (evt.key === 'Enter') {
     if (!searchBar.value) { return; }
@@ -171,28 +183,41 @@ searchBar.addEventListener('keyup', async (evt) => {
     generateProductList(searchBar.value);
     searchBtn.classList.remove('active');
     searchBar.classList.remove('active');
-    titleHeader.classList.remove('active');
+    title.classList.remove('active');
   }
-});
+})
 
 searchBtn.addEventListener('click', async () => {
   if (searchBtn.classList.contains('active')) {
     searchBtn.classList.remove('active');
     searchBar.classList.remove('active');
-    titleHeader.classList.remove('active');
+    title.classList.remove('active');
   } else {
     searchBtn.classList.add('active');
     searchBar.classList.add('active');
-    titleHeader.classList.add('active');
+    title.classList.add('active');
   }
   if (!searchBar.value || searchBar.value === localStorage.lastSearch) { return; }
   itemsList.innerHTML = '';
   lastSearch = searchBar.value;
   saveCart();
   generateProductList(searchBar.value);
-});
+})
 
-cartIcon.addEventListener('click', () => {
-  cartIcon.classList.toggle('active');
+cartIcon.addEventListener('click',  () => {
+  cartIcon.classList.toggle('active')
   cart.classList.toggle('active');
 });
+
+// update cart items quantity
+
+window.onload = async () => {
+  loadCart();
+  if (!localStorage.lastSearch) {
+    const products = await getProduct();
+    return products.forEach((product) => itemsList.appendChild(createProductItemElement(product)));
+  } else {
+    lastSearch = localStorage.lastSearch;
+    generateProductList(localStorage.lastSearch);
+  }
+};
